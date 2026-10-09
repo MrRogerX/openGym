@@ -36,15 +36,56 @@ const FIVE_BY_FIVE = [
 
 // [weekday, routineKey] — weekday is a DAYN index, so 1 is Monday. Fixed weeks only: every
 // plan repeats the same seven days, which is all the weekly plan model can represent.
+
+// Roger's knee block, from Bart Szelag (9 Oct 2026) and the 10 Oct gym note.
+// Right knee extension was 54% behind the left. Full range is already there.
+// No plyometrics, no deep squat, no leg press. A fourth number is the starting kilograms.
+const KNEE = [
+  ['knee-legs', 'Knee · Legs', 'legs', [
+    ['0926', 2, 10],
+    ['3518', 2, 10],
+    ['0585', 3, 12, 15],
+    ['3523', 3, 12],
+    ['2972', 2, 10],
+    ['0085', 3, 5, 30],
+    ['0599', 3, 10],
+  ]],
+  ['knee-mobility', 'Knee · Mobility', 'stretch', [
+    ['0486', 2, 10],
+    ['5478', 2, 10],
+    ['2972', 2, 10],
+    ['3715', 2, 8],
+    ['1377', 3, 30],
+    ['1511', 3, 30],
+    ['1059', 3, 30],
+  ]],
+  ['knee-upper', 'Knee · Upper', 'machine', [
+    ['0577', 3, 10, 20],
+    ['0180', 3, 10, 25],
+    ['2330', 3, 10, 25],
+    ['0603', 3, 10, 15],
+    ['5656', 3, 12, 10],
+    ['2249', 3, 12, 15],
+    ['1677', 3, 10, 8],
+  ]],
+  ['knee-flare', 'Knee · Flare', 'stretch', [
+    ['1377', 3, 30],
+    ['1511', 3, 30],
+    ['1059', 3, 30],
+    ['1559', 3, 30],
+  ]],
+]
+
 const PLANS = {
   ppl: { routines: PPL, schedule: [[1, 'push'], [3, 'pull'], [5, 'legs']] },
   'upper-lower': { routines: UPPER_LOWER, schedule: [[1, 'upper-a'], [2, 'lower-a'], [4, 'upper-b'], [5, 'lower-b']] },
   'full-body': { routines: FULL_BODY, schedule: [[1, 'fb-a'], [3, 'fb-b'], [5, 'fb-c']] },
-  '5x5': { routines: FIVE_BY_FIVE, schedule: [[1, '5x5-a'], [3, '5x5-b'], [5, '5x5-c']] }
+  '5x5': { routines: FIVE_BY_FIVE, schedule: [[1, '5x5-a'], [3, '5x5-b'], [5, '5x5-c']] },
+  knee: { routines: KNEE, schedule: [[1, 'knee-legs'], [3, 'knee-mobility'], [5, 'knee-upper'], [0, 'knee-flare']] }
 }
 
 const build = routines =>
-  routines.map(([, name, emoji, list]) => ({ id: uid(), name, emoji, ex: list.map(([id, sets, reps]) => ({ id, sets, reps, weight: 0 })) }))
+  routines.map(([, name, emoji, list]) => ({ id: uid(), name, emoji, ex: list.map(([id, sets, reps, weight]) => ({ id, sets, reps, weight: weight || 0 })) }))
 
 // Fresh routine objects (new ids) — [push, pull, legs]. The demo build seeds a history on
 // top of exactly these three, so this entry point keeps its shape.
@@ -104,14 +145,14 @@ const fitRoutines = (routines, equipment) => {
   const fitted = routines.map(([key, name, emoji, list]) => {
     const taken = new Set(list.map(([id]) => id))
     const out = []
-    for (const [id, sets, reps] of list) {
+    for (const [id, sets, reps, weight] of list) {
       const ex = EXIDX[id]
-      if (!ex || eqAvailable(equipment, ex)) { out.push([id, sets, reps]); continue }
+      if (!ex || eqAvailable(equipment, ex)) { out.push([id, sets, reps, weight]); continue }
       const sub = substituteFor(ex, equipment, taken)
       if (!sub) { dropped++; continue }
       taken.add(sub.id)
       swapped++
-      out.push([sub.id, sets, reps])
+      out.push([sub.id, sets, reps, weight])
     }
     return [key, name, emoji, out]
   }).filter(([, , , list]) => list.length)

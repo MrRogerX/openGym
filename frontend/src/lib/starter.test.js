@@ -27,6 +27,12 @@ const APPROVED = {
     [3, '5×5 B', [['0085', 5, 5], ['0426', 5, 5], ['2330', 5, 5]]],
     [5, '5×5 C', [['0739', 5, 5], ['0047', 5, 5], ['1323', 5, 5]]],
   ],
+  knee: [
+    [1, 'Knee · Legs', [['0926', 2, 10], ['3518', 2, 10], ['0585', 3, 12], ['3523', 3, 12], ['2972', 2, 10], ['0085', 3, 5], ['0599', 3, 10]]],
+    [3, 'Knee · Mobility', [['0486', 2, 10], ['5478', 2, 10], ['2972', 2, 10], ['3715', 2, 8], ['1377', 3, 30], ['1511', 3, 30], ['1059', 3, 30]]],
+    [5, 'Knee · Upper', [['0577', 3, 10], ['0180', 3, 10], ['2330', 3, 10], ['0603', 3, 10], ['5656', 3, 12], ['2249', 3, 12], ['1677', 3, 10]]],
+    [0, 'Knee · Flare', [['1377', 3, 30], ['1511', 3, 30], ['1059', 3, 30], ['1559', 3, 30]]],
+  ],
 }
 
 const shape = r => r.ex.map(e => [e.id, e.sets, e.reps])
@@ -36,6 +42,7 @@ describe('starter plan catalog', () => {
     expect(starterPlanOptions()).toEqual([
       { id: 'ppl', days: 3 }, { id: 'upper-lower', days: 4 },
       { id: 'full-body', days: 3 }, { id: '5x5', days: 3 },
+      { id: 'knee', days: 4 },
     ])
     for (const { id, days } of starterPlanOptions()) expect(starterPlanDays(id)).toHaveLength(days)
   })
@@ -71,7 +78,7 @@ describe.each(Object.keys(APPROVED))('%s', planId => {
         expect(EXIDX[e.id], e.id).toBeTruthy()
         expect(e.sets).toBeGreaterThan(0)
         expect(e.reps).toBeGreaterThan(0)
-        expect(e.weight).toBe(0)
+        expect(e.weight).toBe(planId === 'knee' ? ({ '0585': 15, '0085': 30, '0577': 20, '0180': 25, '2330': 25, '0603': 15, '5656': 10, '2249': 15, '1677': 8 }[e.id] || 0) : 0)
       }
     }
   })
