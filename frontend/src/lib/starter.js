@@ -2,7 +2,7 @@
 // written as string literals inside t() calls in sheets.jsx, because check-source-strings.mjs
 // only finds them there — copy parked in here would silently ship English in every language.
 //
-// A routine is [key, name, emoji, [[exerciseId, sets, reps], …]]. The key is what a plan's
+// A routine is [key, name, emoji, [[exerciseId, sets, reps, weight?], …]]. The key is what a plan's
 // schedule points at, so a weekday never depends on the position of a routine in the array.
 // Names stay canonical English — they become ordinary user routines, which are not translated.
 import { uid } from './format.js'
@@ -34,17 +34,30 @@ const FIVE_BY_FIVE = [
   ['5x5-c', '5×5 C', 'barbell', [['0739', 5, 5], ['0047', 5, 5], ['1323', 5, 5]]]
 ]
 
+// Knee-friendly week. Catalogue stand-ins, not the physio's exact names:
+// band hip extension for the banded push-back, monster walk for the crab walk,
+// stair calf raise for the calf dip, single-leg bridge for the balance hold.
+// No leg press, deep squat, lunge or jump. A fourth number is the starting kilograms.
+const KNEE = [
+  ['knee-legs', 'Knee · Legs', 'legs', [['0980', 3, 10], ['0628', 3, 8], ['0085', 3, 5, 30], ['1490', 3, 12], ['3645', 3, 8]]],
+  ['knee-mobility', 'Knee · Mobility', 'stretch', [['0980', 2, 8], ['0628', 2, 6], ['1459', 2, 5, 20], ['1511', 2, 8], ['1377', 2, 8], ['2567', 2, 8]]],
+  ['knee-upper', 'Knee · Upper', 'machine', [['0577', 3, 10, 20], ['0861', 3, 10, 25], ['2330', 3, 10, 25], ['0603', 3, 10, 15], ['0203', 3, 12, 10], ['0241', 3, 12, 15], ['1677', 3, 10, 8]]],
+  ['knee-flare', 'Knee · Flare', 'stretch', [['1511', 1, 8], ['0613', 1, 8], ['2567', 1, 8], ['1564', 1, 8], ['1377', 1, 8], ['1271', 1, 8], ['1365', 1, 8], ['1403', 1, 8]]]
+]
+
 // [weekday, routineKey] — weekday is a DAYN index, so 1 is Monday. Fixed weeks only: every
 // plan repeats the same seven days, which is all the weekly plan model can represent.
 const PLANS = {
   ppl: { routines: PPL, schedule: [[1, 'push'], [3, 'pull'], [5, 'legs']] },
   'upper-lower': { routines: UPPER_LOWER, schedule: [[1, 'upper-a'], [2, 'lower-a'], [4, 'upper-b'], [5, 'lower-b']] },
   'full-body': { routines: FULL_BODY, schedule: [[1, 'fb-a'], [3, 'fb-b'], [5, 'fb-c']] },
-  '5x5': { routines: FIVE_BY_FIVE, schedule: [[1, '5x5-a'], [3, '5x5-b'], [5, '5x5-c']] }
+  '5x5': { routines: FIVE_BY_FIVE, schedule: [[1, '5x5-a'], [3, '5x5-b'], [5, '5x5-c']] },
+  'knee-rehab': { routines: KNEE, schedule: [[1, 'knee-legs'], [3, 'knee-mobility'], [5, 'knee-upper'], [0, 'knee-flare']] }
 }
 
+// A missing weight stays 0, which is what every plan except Knee rehab uses.
 const build = routines =>
-  routines.map(([, name, emoji, list]) => ({ id: uid(), name, emoji, ex: list.map(([id, sets, reps]) => ({ id, sets, reps, weight: 0 })) }))
+  routines.map(([, name, emoji, list]) => ({ id: uid(), name, emoji, ex: list.map(([id, sets, reps, weight = 0]) => ({ id, sets, reps, weight })) }))
 
 // Fresh routine objects (new ids) — [push, pull, legs]. The demo build seeds a history on
 // top of exactly these three, so this entry point keeps its shape.
@@ -104,14 +117,14 @@ const fitRoutines = (routines, equipment) => {
   const fitted = routines.map(([key, name, emoji, list]) => {
     const taken = new Set(list.map(([id]) => id))
     const out = []
-    for (const [id, sets, reps] of list) {
+    for (const [id, sets, reps, weight = 0] of list) {
       const ex = EXIDX[id]
-      if (!ex || eqAvailable(equipment, ex)) { out.push([id, sets, reps]); continue }
+      if (!ex || eqAvailable(equipment, ex)) { out.push([id, sets, reps, weight]); continue }
       const sub = substituteFor(ex, equipment, taken)
       if (!sub) { dropped++; continue }
       taken.add(sub.id)
       swapped++
-      out.push([sub.id, sets, reps])
+      out.push([sub.id, sets, reps, weight])
     }
     return [key, name, emoji, out]
   }).filter(([, , , list]) => list.length)

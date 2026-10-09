@@ -27,15 +27,22 @@ const APPROVED = {
     [3, '5×5 B', [['0085', 5, 5], ['0426', 5, 5], ['2330', 5, 5]]],
     [5, '5×5 C', [['0739', 5, 5], ['0047', 5, 5], ['1323', 5, 5]]],
   ],
+  'knee-rehab': [
+    [1, 'Knee · Legs', [['0980', 3, 10], ['0628', 3, 8], ['0085', 3, 5, 30], ['1490', 3, 12], ['3645', 3, 8]]],
+    [3, 'Knee · Mobility', [['0980', 2, 8], ['0628', 2, 6], ['1459', 2, 5, 20], ['1511', 2, 8], ['1377', 2, 8], ['2567', 2, 8]]],
+    [5, 'Knee · Upper', [['0577', 3, 10, 20], ['0861', 3, 10, 25], ['2330', 3, 10, 25], ['0603', 3, 10, 15], ['0203', 3, 12, 10], ['0241', 3, 12, 15], ['1677', 3, 10, 8]]],
+    [0, 'Knee · Flare', [['1511', 1, 8], ['0613', 1, 8], ['2567', 1, 8], ['1564', 1, 8], ['1377', 1, 8], ['1271', 1, 8], ['1365', 1, 8], ['1403', 1, 8]]],
+  ],
 }
 
 const shape = r => r.ex.map(e => [e.id, e.sets, e.reps])
 
 describe('starter plan catalog', () => {
-  it('offers exactly the four plans, with the day count read off the schedule', () => {
+  it('offers the five plans, with the day count read off the schedule', () => {
     expect(starterPlanOptions()).toEqual([
       { id: 'ppl', days: 3 }, { id: 'upper-lower', days: 4 },
       { id: 'full-body', days: 3 }, { id: '5x5', days: 3 },
+      { id: 'knee-rehab', days: 4 },
     ])
     for (const { id, days } of starterPlanOptions()) expect(starterPlanDays(id)).toHaveLength(days)
   })
@@ -55,7 +62,7 @@ describe.each(Object.keys(APPROVED))('%s', planId => {
   it('builds the approved exercises, sets and reps in order', () => {
     const { routines } = buildStarterPlan(planId)
     expect(routines.map(r => r.name)).toEqual(approved.map(([, name]) => name))
-    routines.forEach((r, i) => expect(shape(r)).toEqual(approved[i][2]))
+    routines.forEach((r, i) => expect(shape(r)).toEqual(approved[i][2].map(([id, sets, reps]) => [id, sets, reps])))
   })
 
   it('puts each routine on its approved weekday, by identity not position', () => {
@@ -65,15 +72,16 @@ describe.each(Object.keys(APPROVED))('%s', planId => {
       .toEqual(approved.map(([day, name]) => [day, name]))
   })
 
-  it('references only real exercises and starts every one at weight 0', () => {
-    for (const r of buildStarterPlan(planId).routines) {
-      for (const e of r.ex) {
+  it('references only real exercises and keeps the prescribed weight', () => {
+    const { routines } = buildStarterPlan(planId)
+    routines.forEach((r, i) => {
+      r.ex.forEach((e, j) => {
         expect(EXIDX[e.id], e.id).toBeTruthy()
         expect(e.sets).toBeGreaterThan(0)
         expect(e.reps).toBeGreaterThan(0)
-        expect(e.weight).toBe(0)
-      }
-    }
+        expect(e.weight).toBe(approved[i][2][j][3] ?? 0)
+      })
+    })
   })
 
   it('mints fresh ids and independent objects on every build', () => {
@@ -153,7 +161,8 @@ describe('fitting a starter plan to equipment', () => {
   it('never stands in with a stretch, a hold or a drill that needs a ball nobody ticked', () => {
     const bad = /stretch|isometric|squeeze|yoga|toe touch|exercise ball|bosu/i
     for (const eq of [['dumbbell'], ['dumbbell'], ['band'], []]) {
-      for (const { id } of starterPlanOptions()) {
+      // Knee rehab's flare day is stretches on purpose. The rule is about stand-ins.
+      for (const { id } of starterPlanOptions().filter(p => p.id !== 'knee-rehab')) {
         for (const exId of ids(buildStarterPlan(id, eq))) expect(EXIDX[exId].n).not.toMatch(bad)
       }
     }
